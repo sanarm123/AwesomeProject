@@ -5,8 +5,11 @@
  * @format
  */
 
-import React from 'react';
+import React,{useState, useRef} from 'react';
 import type {PropsWithChildren} from 'react';
+import Video from 'react-native-video';
+import MediaControls, { PLAYER_STATES } from 'react-native-media-controls';
+
 import {
   SafeAreaView,
   ScrollView,
@@ -16,6 +19,7 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
+
 
 import {
   Colors,
@@ -29,89 +33,141 @@ type SectionProps = PropsWithChildren<{
   title: string;
 }>;
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+
 
 function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+  const videoPlayer = useRef(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [paused, setPaused] = useState(false);
+  const [
+    playerState, setPlayerState
+  ] = useState(PLAYER_STATES.PLAYING);
+  const [screenType, setScreenType] = useState('content');
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  const onSeek = (seek) => {
+    //Handler for change in seekbar
+    videoPlayer.current.seek(seek);
+    console.log(seek);
   };
 
+  const onPaused = (playerState) => {
+    //Handler for Video Pause
+    setPaused(!paused);
+    setPlayerState(playerState);
+  };
+
+  const onReplay = () => {
+    //Handler for Replay
+    setPlayerState(PLAYER_STATES.PLAYING);
+    videoPlayer.current.seek(0);
+  };
+
+  const onProgress = (data) => {
+    // Video Player will progress continue even if it ends
+    if (!isLoading && playerState !== PLAYER_STATES.ENDED) {
+      setCurrentTime(data.currentTime);
+    }
+  };
+
+  const onLoad = (data) => {
+    console.log(data.duration);
+    setDuration(data.duration);
+    setIsLoading(false);
+  };
+
+  const onLoadStart = (data) => setIsLoading(true);
+
+  const onEnd = () => setPlayerState(PLAYER_STATES.ENDED);
+
+  const onError = () => alert('Oh! ', error);
+
+  const exitFullScreen = () => {
+    alert('Exit full screen');
+  };
+
+  const enterFullScreen = () => {};
+
+  const onFullScreen = () => {
+    setIsFullScreen(isFullScreen);
+    if (screenType == 'content') setScreenType('cover');
+    else setScreenType('content');
+  };
+
+  const renderToolbar = () => (
+    <View>
+      <Text style={styles.toolbar}> toolbar </Text>
+    </View>
+  );
+
+  const onSeeking = (currentTime) => setCurrentTime(currentTime);
+
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
+    <View  style={{flex: 1}}>
+
+   
+     <Video style={styles.mediaPlayer}
+      controls={true} source={{uri: "http://localhost:3000/videos/cdn"}} 
+      onEnd={onEnd}
+      onLoad={onLoad}
+      onLoadStart={onLoadStart}
+      onProgress={onProgress}
+      paused={paused}
+      ref={videoPlayer}
+      resizeMode={screenType}
+      
+      onFullScreen={isFullScreen}
+     
+     />
+     <MediaControls
+        duration={duration}
+        isLoading={isLoading}
+        mainColor="#333"
+        onFullScreen={onFullScreen}
+        onPaused={onPaused}
+        onReplay={onReplay}
+        onSeek={onSeek}
+        onSeeking={onSeeking}
+        playerState={playerState}
+        progress={currentTime}
+        toolbar={renderToolbar()}
       />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+</View>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  container: {
+    flex: 1,
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+  vid:{
+    height:600,
+    width:900,
   },
-  sectionDescription: {
-    marginTop: 8,
+  paragraph: {
+    margin: 24,
     fontSize: 18,
-    fontWeight: '400',
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
-  highlight: {
-    fontWeight: '700',
+  toolbar: {
+    marginTop: 30,
+    backgroundColor: 'white',
+    padding: 10,
+    borderRadius: 5,
+  },
+  mediaPlayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    height:600,
+    width:900,
+    right: 0,
+    backgroundColor: 'black',
+    justifyContent: 'center',
   },
 });
 
